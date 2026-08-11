@@ -124,7 +124,7 @@ public class UserService {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 사용자입니다.")
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
         return new UserResponse(
@@ -145,7 +145,7 @@ public class UserService {
     ) {
         User user = userRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("존재하지 않는 사용자입니다")
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
                 );
 
         if (userRepository.findByNickname(request.getNickname()).isPresent()) {
@@ -155,6 +155,20 @@ public class UserService {
         }
 
         user.changeNickname(request.getNickname());
+        userRepository.save(user);
+    }
+
+    // 이메일 변경
+    public void changeEmail(
+            Long id,
+            ChangeEmailRequest request
+    ) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.changeEmail(request.getEmail());
         userRepository.save(user);
     }
 }

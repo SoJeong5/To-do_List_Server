@@ -94,20 +94,20 @@ public class UserController {
         );
     }
 
-//    @PatchMapping("/{id}/email")
-//    public ResponseEntity<ApiResponse> changeEmail(
-//            @PathVariable Long id,
-//            @RequestBody ChangeEmailRequest request
-//    ) {
-//        userService.changeEmail(id, request);
-//
-//        return ResponseEntity.ok(
-//                new ApiResponse<>(
-//                        true,
-//                        "이메일 변경 성공",
-//                        null
-//                )
-//        );
-//    }
+    @PatchMapping("/{id}/email")
+    public ResponseEntity<ApiResponse> changeEmail(
+            @PathVariable Long id,
+            @RequestBody ChangeEmailRequest request
+    ) {
+        userService.changeEmail(id, request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "이메일 변경 성공",
+                        null
+                )
+        );
+    }
 
 }
