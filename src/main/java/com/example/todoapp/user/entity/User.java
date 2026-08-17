@@ -71,4 +71,8 @@ public class User {
     public void changeBirth(LocalDate birth) {
         this.birth = birth;
     }
+
+    public void changePassword(String password) {
+        this.password = password;
+    }
 }
