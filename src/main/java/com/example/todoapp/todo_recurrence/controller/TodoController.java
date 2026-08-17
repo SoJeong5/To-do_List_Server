@@ -27,6 +27,14 @@ public class TodoController {
         return ResponseEntity.ok(todoService.getTodosForDate(userId, date));
     }
 
+    @GetMapping("/completed-dates")
+    public ResponseEntity<List<String>> getCompletedDatesByMonth(
+            @RequestParam("userId") Long userId,
+            @RequestParam("year") int year,
+            @RequestParam("month") int month) {
+        return ResponseEntity.ok(todoService.getCompletedDatesForMonth(userId, year, month));
+    }
+
     //To-do 생성
     @PostMapping
     public ResponseEntity<TodoResponseDto> createTodo(@RequestBody TodoCreateRequestDto dto) {
