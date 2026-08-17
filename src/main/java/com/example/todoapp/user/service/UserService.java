@@ -185,6 +185,20 @@ public class UserService {
         user.changePhone(request.getPhone());
         userRepository.save(user);
     }
+
+    // 생년월일 변경
+    public void changeBirth(
+            Long id,
+            ChangeBirthRequest request
+    ) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.changeBirth(request.getBirth());
+        userRepository.save(user);
+    }
 }
 
 
