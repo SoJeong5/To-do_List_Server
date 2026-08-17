@@ -109,5 +109,20 @@ public class UserController {
                 )
         );
     }
+    @PatchMapping("/{id}/phone")
+    public ResponseEntity<ApiResponse> changePhone(
+            @PathVariable Long id,
+            @RequestBody ChangePhoneRequest request
+    ) {
+        userService.changePhone(id, request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "휴대폰번호 변경 성공",
+                        null
+                )
+        );
+    }
 
 }
