@@ -142,4 +142,19 @@ public class UserController {
         );
     }
 
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @PathVariable Long id,
+            @RequestBody ChangePasswordRequest request
+    ) {
+        userService.changePassword(id, request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "비밀번호 변경 성공",
+                        null
+                )
+        );
+    }
 }
