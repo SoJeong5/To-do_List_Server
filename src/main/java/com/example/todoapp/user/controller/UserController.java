@@ -109,6 +109,7 @@ public class UserController {
                 )
         );
     }
+
     @PatchMapping("/{id}/phone")
     public ResponseEntity<ApiResponse> changePhone(
             @PathVariable Long id,
@@ -120,6 +121,22 @@ public class UserController {
                 new ApiResponse<>(
                         true,
                         "휴대폰번호 변경 성공",
+                        null
+                )
+        );
+    }
+
+    @PatchMapping("/{id}/birth")
+    public ResponseEntity<ApiResponse> changeBirth(
+            @PathVariable Long id,
+            @RequestBody ChangeBirthRequest request
+    ) {
+        userService.changeBirth(id, request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "생년월일 변경 성공",
                         null
                 )
         );
