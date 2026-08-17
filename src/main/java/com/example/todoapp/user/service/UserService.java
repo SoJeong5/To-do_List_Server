@@ -171,4 +171,21 @@ public class UserService {
         user.changeEmail(request.getEmail());
         userRepository.save(user);
     }
+
+    // 휴대폰번호 변경
+    public void changePhone(
+            Long id,
+            ChangePhoneRequest request
+    ) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        user.changePhone(request.getPhone());
+        userRepository.save(user);
+    }
 }
+
+
+
