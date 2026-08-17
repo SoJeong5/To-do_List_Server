@@ -67,4 +67,8 @@ public class User {
     public void changePhone(String phone) {
         this.phone = phone;
     }
+
+    public void changeBirth(LocalDate birth) {
+        this.birth = birth;
+    }
 }
