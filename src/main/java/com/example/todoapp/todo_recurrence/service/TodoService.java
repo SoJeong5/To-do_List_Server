@@ -7,7 +7,6 @@ import com.example.todoapp.todo_recurrence.entity.Recurrence;
 import com.example.todoapp.todo_recurrence.entity.Todo;
 import com.example.todoapp.todo_recurrence.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,19 +70,12 @@ public class TodoService {
 
         String recurrenceType = todo.getRecurrence().getRecurrenceType();
 
-        switch (recurrenceType) {
-            case "DAILY":
-                return true;
-
-            case "WEEKLY":
-                return date.getDayOfWeek() == startDate.getDayOfWeek();
-
-            case "MONTHLY":
-                return date.getDayOfMonth() == startDate.getDayOfMonth();
-
-            default:
-                return true;
-        }
+        return switch (recurrenceType) {
+            case "DAILY" -> true;
+            case "WEEKLY" -> date.getDayOfWeek() == startDate.getDayOfWeek();
+            case "MONTHLY" -> date.getDayOfMonth() == startDate.getDayOfMonth();
+            default -> true;
+        };
     }
 
     public TodoResponseDto createTodo(TodoCreateRequestDto dto) {
@@ -112,7 +104,7 @@ public class TodoService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 To-do를 찾을 수 없습니다. id=" + id));
 
         Boolean currentStatus = todo.getIsCompleted();
-        todo.setIsCompleted(currentStatus == null ? true : !currentStatus);
+        todo.setIsCompleted(currentStatus == null || !currentStatus);
     }
 
     public TodoResponseDto updateTodo(Long id, TodoUpdateRequestDto dto) {
