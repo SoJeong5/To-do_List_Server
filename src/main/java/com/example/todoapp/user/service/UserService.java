@@ -199,6 +199,28 @@ public class UserService {
         user.changeBirth(request.getBirth());
         userRepository.save(user);
     }
+
+    // 비밀번호 변경
+    public void changePassword(
+            Long id,
+            ChangePasswordRequest request
+    ) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPassword()
+        )) {
+            throw new BusinessException(ErrorCode.PASSWORD_NOT_MATCH);
+        }
+
+        user.changePassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+    }
 }
 
 
