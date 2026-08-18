@@ -3,6 +3,8 @@ package com.example.todoapp.user.service;
 import com.example.todoapp.common.exception.BusinessException;
 import com.example.todoapp.common.exception.ErrorCode;
 import com.example.todoapp.common.response.ApiResponse;
+import com.example.todoapp.todo_recurrence.entity.Todo;
+import com.example.todoapp.todo_recurrence.repository.TodoRepository;
 import com.example.todoapp.user.dto.*;
 import com.example.todoapp.user.entity.User;
 import com.example.todoapp.user.repository.UserRepository;
@@ -10,18 +12,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-//    private final UserService userService;
+    private final TodoRepository todoRepository;
 
     // 회원가입
     public void signup(SignupRequest request) {
@@ -51,6 +57,25 @@ public class UserService {
 
         // DB 저장
         userRepository.save(user);
+    }
+
+    // 회원 탈퇴
+    public void deleteUser(Long id) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() ->
+                        new BusinessException(ErrorCode.USER_NOT_FOUND)
+                );
+
+        // 해당 회원의 모든 Todo삭제(todo와 recurrence)
+        // 방법1(Todo들을 조회하고 조회한 Todo엔티티들을 deleteAll()로 삭제)
+        List<Todo> todos = todoRepository.findAllByUserId(id);
+        todoRepository.deleteAll(todos);
+        // 방법2(DB에서 해당 userId를 가진 Todo들을 한 번에 삭제)
+//        todoRepository.deleteAllByUserId(id);
+
+        // 회원 삭제
+        userRepository.delete(user);
     }
 
     // 아이디 중복 확인
