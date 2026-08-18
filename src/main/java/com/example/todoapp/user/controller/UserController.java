@@ -44,13 +44,21 @@ public class UserController {
                         )
                 );
     }
-//    public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
-//        userService.signup(request);
-//
-//        return ResponseEntity
-//                .status(HttpStatus.CREATED)
-//                .body("회원가입 성공");
-//    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "회원 탈퇴 성공",
+                                null
+                        )
+                );
+    }
 
     @GetMapping("/check-login-id")
     public ResponseEntity<UserCheckResponse> checkLoginId(@RequestParam String loginId) {
