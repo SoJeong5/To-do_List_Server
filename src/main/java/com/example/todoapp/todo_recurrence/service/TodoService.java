@@ -3,7 +3,6 @@ package com.example.todoapp.todo_recurrence.service;
 import com.example.todoapp.todo_recurrence.dto.TodoCreateRequestDto;
 import com.example.todoapp.todo_recurrence.dto.TodoResponseDto;
 import com.example.todoapp.todo_recurrence.dto.TodoUpdateRequestDto;
-import com.example.todoapp.todo_recurrence.entity.Recurrence;
 import com.example.todoapp.todo_recurrence.entity.Todo;
 import com.example.todoapp.todo_recurrence.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
@@ -60,16 +59,18 @@ public class TodoService {
         LocalDate startDate = todo.getStartDate();
         LocalDate endDate = todo.getEndDate();
 
+        // 날짜 범위 벗어나면 제외
         if (date.isBefore(startDate) || date.isAfter(endDate)) {
             return false;
         }
 
+        // 개별 생성 구조 및 일반/기한 Todo 노출
         if (todo.getRecurrence() == null) {
             return true;
         }
 
+        // (기존 레거시 데이터 호환용)
         String recurrenceType = todo.getRecurrence().getRecurrenceType();
-
         return switch (recurrenceType) {
             case "DAILY" -> true;
             case "WEEKLY" -> date.getDayOfWeek() == startDate.getDayOfWeek();
@@ -79,24 +80,56 @@ public class TodoService {
     }
 
     public TodoResponseDto createTodo(TodoCreateRequestDto dto) {
-        Todo todo = new Todo();
-        todo.setUserId(dto.getUserId());
-        todo.setTitle(dto.getTitle());
-        todo.setTime(dto.getTime());
-        todo.setStartDate(dto.getStartDate());
-        todo.setEndDate(dto.getEndDate());
-        todo.setType(dto.getType());
+        if(Boolean.TRUE.equals(dto.getIsRepeat())){
+            LocalDate start = dto.getStartDate();
+            LocalDate end = dto.getEndDate();
 
-        if (Boolean.TRUE.equals(dto.getIsRepeat())) {
-            Recurrence recurrence = new Recurrence();
-            recurrence.setRecurrenceType(dto.getRecurrenceType());
-            recurrence.setEndDate(dto.getRecurrenceEndDate() != null ? dto.getRecurrenceEndDate() : dto.getEndDate());
+            String recurrenceType = dto.getRecurrenceType() != null ? dto.getRecurrenceType() : "DAILY";
+            Todo lastSavedTodo = null;
 
-            todo.setRecurrence(recurrence);
+            while(!start.isAfter(end)){
+                boolean shouldCreate = switch(recurrenceType){
+                    case "DAILY" -> true;
+                    case "WEEKLY" -> start.getDayOfWeek() == dto.getStartDate().getDayOfWeek();
+                    case "MONTHLY" -> start.getDayOfMonth() == dto.getStartDate().getDayOfMonth();
+                    default -> true;
+                };
+
+                if(shouldCreate){
+                    Todo todo = new Todo();
+
+                    todo.setUserId(dto.getUserId());
+                    todo.setTitle(dto.getTitle());
+                    todo.setTime(dto.getTime());
+
+                    // 날짜별 독립 객체 생성 (하루 단위 고정)
+                    todo.setStartDate(start);
+                    todo.setEndDate(start);
+                    todo.setType(dto.getType());
+                    todo.setIsCompleted(false);
+
+                    lastSavedTodo = todoRepository.save(todo);
+                }
+
+                start = start.plusDays(1);
+            }
+
+            return TodoResponseDto.from(lastSavedTodo);
         }
+        else{
+            Todo todo = new Todo();
+            todo.setUserId(dto.getUserId());
+            todo.setTitle(dto.getTitle());
+            todo.setTime(dto.getTime());
+            todo.setStartDate(dto.getStartDate());
+            todo.setEndDate(dto.getEndDate());
+            todo.setType(dto.getType());
+            todo.setIsCompleted(false);
 
-        Todo savedTodo = todoRepository.save(todo);
-        return TodoResponseDto.from(savedTodo);
+            Todo savedTodo = todoRepository.save(todo);
+
+            return TodoResponseDto.from(savedTodo);
+        }
     }
 
     public void toggleCheck(Long id) {
@@ -111,27 +144,64 @@ public class TodoService {
         Todo todo = todoRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("해당 To-do를 찾을 수 없습니다. id=" + id));
 
-        todo.setTitle(dto.getTitle());
-        todo.setTime(dto.getTime());
-        todo.setStartDate(dto.getStartDate());
-        todo.setEndDate(dto.getEndDate());
-        todo.setType(dto.getType());
+        String oldTitle = todo.getTitle();
+        Long userId = todo.getUserId();
+        LocalDate currentStartDate = todo.getStartDate(); // 수정 시도한 항목의 날짜
 
-        if (Boolean.TRUE.equals(dto.getIsRepeat())) {
-            if (todo.getRecurrence() != null) {
-                todo.getRecurrence().setRecurrenceType(dto.getRecurrenceType());
-                todo.getRecurrence().setEndDate(dto.getRecurrenceEndDate() != null ? dto.getRecurrenceEndDate() : dto.getEndDate());
-            } else {
-                Recurrence recurrence = new Recurrence();
-                recurrence.setRecurrenceType(dto.getRecurrenceType());
-                recurrence.setEndDate(dto.getRecurrenceEndDate() != null ? dto.getRecurrenceEndDate() : dto.getEndDate());
-                todo.setRecurrence(recurrence);
+        // 1. 반복 Todo인 경우: 오늘(현재 수정 날짜) 포함 이후의 기존 반복 Todo들을 정리/재생성
+        if ("REPEAT".equals(todo.getType()) || Boolean.TRUE.equals(dto.getIsRepeat())) {
+
+            // ① 기존에 생성되어 있던 '현재 날짜 포함 이후' 동일 반복 Todo들을 DB에서 모두 삭제
+            List<Todo> futureTodos = todoRepository.findAllByUserId(userId).stream()
+                    .filter(t -> "REPEAT".equals(t.getType()))
+                    .filter(t -> oldTitle.equals(t.getTitle()))
+                    .filter(t -> !t.getStartDate().isBefore(currentStartDate))
+                    .toList();
+
+            todoRepository.deleteAll(futureTodos); // 싹 지워서 범위 벗어난 항목 제거!
+
+            // ② 새로운 기간(dto.getStartDate() ~ dto.getEndDate()) 및 조건으로 새로 생성
+            LocalDate start = dto.getStartDate();
+            LocalDate end = dto.getEndDate();
+            String recurrenceType = dto.getRecurrenceType() != null ? dto.getRecurrenceType() : "DAILY";
+            Todo lastSavedTodo = null;
+
+            while (!start.isAfter(end)) {
+                boolean shouldCreate = switch (recurrenceType) {
+                    case "DAILY" -> true;
+                    case "WEEKLY" -> start.getDayOfWeek() == dto.getStartDate().getDayOfWeek();
+                    case "MONTHLY" -> start.getDayOfMonth() == dto.getStartDate().getDayOfMonth();
+                    default -> true;
+                };
+
+                if (shouldCreate) {
+                    Todo newTodo = new Todo();
+                    newTodo.setUserId(userId);
+                    newTodo.setTitle(dto.getTitle());
+                    newTodo.setTime(dto.getTime());
+                    newTodo.setStartDate(start);
+                    newTodo.setEndDate(start);
+                    newTodo.setType("REPEAT");
+                    newTodo.setIsCompleted(false);
+
+                    lastSavedTodo = todoRepository.save(newTodo);
+                }
+                start = start.plusDays(1);
             }
-        } else {
-            todo.setRecurrence(null);
+
+            return TodoResponseDto.from(lastSavedTodo != null ? lastSavedTodo : todo);
         }
 
-        return TodoResponseDto.from(todo);
+        // 2. 일반 / 기한 Todo 수정인 경우
+        else {
+            todo.setTitle(dto.getTitle());
+            todo.setTime(dto.getTime());
+            todo.setStartDate(dto.getStartDate());
+            todo.setEndDate(dto.getEndDate());
+            todo.setType(dto.getType());
+
+            return TodoResponseDto.from(todo);
+        }
     }
 
     public void deleteTodo(Long id) {
